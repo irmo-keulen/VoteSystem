@@ -13,11 +13,11 @@ import (
 
 // Used to indentify user
 type userCred struct {
-	Usercode        string
-	Username        string
-	Voted           bool
-	PublicKey       *rsa.PublicKey
-	PublicKeyString string
+	Usercode        string `json:usercode`
+	Username        string `json:username`
+	Voted           bool   `json:voted`
+	publicKey       *rsa.PublicKey
+	PublicKeyString string `json:publickey`
 }
 
 func (u *userCred) String() string {
@@ -31,8 +31,12 @@ func main() {
 	if err != nil {
 		fmt.Printf("Generating Keys returned the following error. err: %v", err.Error())
 	}
-	r := mux.NewRouter()
 
+	// For test purposes
+	fmt.Println(checkUserCred(user{"test1", "pass1"}))
+
+	r := mux.NewRouter()
+	fmt.Printf("Setup Finished.\nServer listening on localhost:8000\n")
 	r.HandleFunc("/", index)
 	r.HandleFunc("/api/pubkey", sendPubKey).Methods("GET")
 	r.HandleFunc("/api/pubkey", retrieveKey).Methods("POST")
@@ -45,6 +49,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello, World"))
 }
 
+// Returns public key
 func sendPubKey(w http.ResponseWriter, r *http.Request) {
 	key, err := ioutil.ReadFile("./pub_key")
 	fmt.Println("sfjksdjflksjdflkjsf")
