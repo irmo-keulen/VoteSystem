@@ -22,7 +22,6 @@ func genRsaKeyPair(filenamePub, filenamePriv string) error {
 	tmp1 := "\u2713\u2715"
 	tmp2, _ := utf8.DecodeRuneInString(tmp1)
 	ck := string(tmp2)
-
 	fmt.Printf("Generating keys: \n- Privpath: \t%s\n- Pubpath:\t%s\n", fpPriv, fpPub)
 
 	if _, err := os.Stat(fpPriv); !os.IsNotExist(err) { // Checks if private key already exists
