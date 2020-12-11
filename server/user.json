@@ -1,0 +1,17 @@
+{
+    "users": [
+        {
+            "usercode": "123456789",
+            "username": "TestUser",
+            "voted": false,
+            "publicKey": ""
+        },
+        {
+            "usercode": "987654321",
+            "username": "TestUser2",
+            "voted": false,
+            "publicKey": ""
+        }
+        
+    ]
+}

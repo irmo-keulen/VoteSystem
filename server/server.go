@@ -1,8 +1,8 @@
 package main
 
 import (
-	"crypto/x509"
-	"encoding/pem"
+	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +10,20 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+// Used to indentify user
+type userCred struct {
+	Usercode        string
+	Username        string
+	Voted           bool
+	PublicKey       *rsa.PublicKey
+	PublicKeyString string
+}
+
+func (u *userCred) String() string {
+	return fmt.Sprintf("{\"usercode\":\"%s\",\"username\":\"%s\",\"voted\":%t,\"publicKey\":\"%s\"}",
+		u.Usercode, u.Username, u.Voted, u.PublicKeyString)
+}
 
 func main() {
 	filenamePub, filenamePriv := "./pub_key", "./priv_key"
@@ -33,6 +47,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func sendPubKey(w http.ResponseWriter, r *http.Request) {
 	key, err := ioutil.ReadFile("./pub_key")
+	fmt.Println("sfjksdjflksjdflkjsf")
 	if err != nil {
 		panic(err)
 	}
@@ -44,17 +59,29 @@ func sendPubKey(w http.ResponseWriter, r *http.Request) {
 // - Returns         : nil
 // - TODO            : Write key to DB
 func retrieveKey(w http.ResponseWriter, r *http.Request) {
+	cred := userCred{}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.Write([]byte("Whoops Something went wrong, Try again."))
+		w.Write([]byte("Whoops Something went wrong, Please try again."))
 	}
-	keyPem, _ := pem.Decode(msg)
-	if keyPem.Type != "RSA PUBLIC KEY" {
-		w.Write([]byte("Field type isn't correct"))
-	}
-	parsedKey, err := x509.ParsePKCS1PublicKey(keyPem.Bytes)
+	err = json.Unmarshal(msg, &cred)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(fmt.Errorf("Error parsing data, %s", err.Error()))
+		return
 	}
-	fmt.Println(parsedKey)
+	fmt.Printf("%v", cred.String())
+
+	// TODO:
+	// check usercred (user.json) and
+
+	// @Deprecated (body now consist of json, rather than as bytes).
+	// keyPem, _ := pem.Decode(msg)
+	// if keyPem.Type != "RSA PUBLIC KEY" {
+	// 	w.Write([]byte("Field type isn't correct"))
+	// }
+	// parsedKey, err := x509.ParsePKCS1PublicKey(keyPem.Bytes)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
+	// fmt.Println(parsedKey)
 }
