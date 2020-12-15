@@ -14,21 +14,26 @@ import (
 	"github.com/hashicorp/go-multierror"
 )
 
+var (
+	tmp1    = "\u2713\u2715"
+	tmp2, _ = utf8.DecodeRuneInString(tmp1)
+	ck      = string(tmp2)
+)
+
 // Generates new RSA Private/public Key (struct).
 // Returns: multierror.Error (if no errors are caught this will be nil)
 func genRsaKeyPair(filenamePub, filenamePriv string) error {
 	fpPub, _ := filepath.Abs(filenamePub)
 	fpPriv, _ := filepath.Abs(filenamePriv)
-	tmp1 := "\u2713\u2715"
-	tmp2, _ := utf8.DecodeRuneInString(tmp1)
-	ck := string(tmp2)
 	fmt.Printf("Generating keys: \n- Privpath: \t%s\n- Pubpath:\t%s\n", fpPriv, fpPub)
 
 	if _, err := os.Stat(fpPriv); !os.IsNotExist(err) { // Checks if private key already exists
 		fmt.Printf("%v PrivKey Path Exists.\nskipping generating keys.\n", ck)
 		return nil
 	}
+
 	var err *multierror.Error
+
 	privKey, rsaErr := rsa.GenerateKey(rand.Reader, 4096)
 	multierror.Append(rsaErr, err)
 	multierror.Append(savePEMKey(filenamePriv, privKey), err)                // Saves private Key

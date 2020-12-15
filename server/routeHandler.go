@@ -12,23 +12,12 @@ func index(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello, World"))
 }
 
-// Returns public key
-// - Methods Allowed : GET
-// - Returns 		 : string("hello, World")
-func sendPubKey(w http.ResponseWriter, r *http.Request) {
-	key, err := ioutil.ReadFile("./pub_key")
-	if err != nil {
-		panic(err)
-	}
-	w.Write(key)
-}
-
 // Used to retrieve Public key from CLI-user
 // - Methods Allowed : POST
-// - Returns         : nil
+// - Returns         : Public Key Server
 // - TODO            : Write key to DB
 func retrieveKey(w http.ResponseWriter, r *http.Request) {
-	cred := userCred{}
+	var cred userCred
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.Write([]byte("Whoops Something went wrong, Please try again."))
@@ -38,5 +27,19 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(fmt.Errorf("Error parsing data, %s", err.Error()))
 		return
 	}
-	fmt.Printf("%v", cred.String())
+	// privb, _ := pem.Decode(cred.PublicKeyPEM)
+	if err != nil {
+		fmt.Println(err)
+		w.Write([]byte("An error occured"))
+	}
+	fmt.Printf("%v", cred)
+	// Returns own public key.
+	key, err := ioutil.ReadFile("./pub_key")
+	if err != nil {
+		panic(err)
+	}
+	w.Write(key)
 }
+
+// TODO:
+//     write publickey to redis database (key = usercode)
