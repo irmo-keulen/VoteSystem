@@ -14,3 +14,7 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 .editorconfig
+.idea
+
+pub_key
+priv_key
