@@ -9,15 +9,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"unicode/utf8"
 
 	"github.com/hashicorp/go-multierror"
 )
 
 var (
-	tmp1    = "\u2713\u2715"
-	tmp2, _ = utf8.DecodeRuneInString(tmp1)
-	ck      = string(tmp2)
+	ck = "\u2713"
 )
 
 // Generates new RSA Private/public Key (struct).
@@ -40,6 +37,19 @@ func genRsaKeyPair(filenamePub, filenamePriv string) error {
 	multierror.Append(savePublicPEMKey(filenamePub, privKey.PublicKey), err) // Saves Public Key
 	fmt.Printf("%v Done Generating Keys", ck)
 	return err.ErrorOrNil() //Returns nil if no errors has been caught
+}
+
+// Parses PEM-Based string and returns pointer to rsa.PublicKey
+func parsePublicPEMKey(pemString []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(pemString)
+	if block == nil {
+		return nil, fmt.Errorf("error decoding PEM")
+	}
+	pubKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing public key, err: %s", err)
+	}
+	return pubKey, nil
 }
 
 // Saves PrivateKey to file, if file doens't exist a file will be created.

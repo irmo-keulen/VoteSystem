@@ -19,10 +19,10 @@ YsGtt8ojRDx2q3vx5SNtBa05cq4Zj5ZV/6yBA1WbDjEdehQSJX+wJj4w1Azfyhhg
 6VN5KI1BzEtewMCeMcfk9p14+UzEGDoJSUXBXQW7gVmq8vRKpTMsYGkDYtTsVkX9
 aMP8BCq7C4/6Ifujo+QsCSiiooLyqSiMNvbNVlb4+4H5zEwAiDcYJKqNJH5nKB6H
 J7z627h5kky7jNtGVaLIob74xLEgOS6pa7gMCanGtC0Fb4y5DZTA+1sCAwEAAQ==
------END PUBLIC KEY-----"""\n
+-----END PUBLIC KEY-----"""
 
 string = {
-    "usercode": "userco", 
+    "usercode": "VeryUniqueUserCode", 
     "publickey":pkey
     }
 js = json.dumps(string)

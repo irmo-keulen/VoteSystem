@@ -42,6 +42,3 @@ func testDBConnect() error {
 	fmt.Printf("%s Connection Succes\n", ck)
 	return nil
 }
-
-// TODO
-//      Close connection (if neccesary)
