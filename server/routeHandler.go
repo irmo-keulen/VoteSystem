@@ -29,6 +29,7 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(msg, &cred)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Error parsing data, %s", err.Error()))
+		_, _ = w.Write([]byte(`{"http-code":500}`))
 		return
 	}
 	err = rdb.Set(ctx, cred.Usercode, cred.PublicKey, 0).Err()
@@ -43,15 +44,13 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(key)
 }
 
-// Only for testing purposes, needs to be removed.
-func tmp(key string) bool {
-	val, err := rdb.Get(ctx, key).Result()
-	if val == "" || err != nil {
-		return false
+func decryptMessage(w http.ResponseWriter, r *http.Request) {
+	privKey, err := ioutil.ReadFile(filenamePriv)
+	msg, err := ioutil.ReadAll(r.Body)
+	fmt.Println(string(msg))
+	if err != nil {
+		fmt.Println("Error")
 	}
-	_, err = parsePublicPEMKey([]byte(val))
-	if err == nil {
-		return true
-	}
-	return false
+	fmt.Println(string(DecryptWithPrivateKey(msg, BytesToPrivateKey(privKey))))
+
 }

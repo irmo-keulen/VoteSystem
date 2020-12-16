@@ -1,48 +1,62 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/gorilla/mux"
 )
+
+type userCred struct {
+	Usercode  string `json:"usercode"`
+	PublicKey []byte `json:"publickey"`
+}
+
+type message struct {
+	Msg []byte `json:"message"`
+}
 
 var (
 	filenamePub  = "./pub_key"
 	filenamePriv = "./priv_key"
+	keyUrl       = "http://localhost:8000/api/pubkey"
 )
 
 func main() {
 	setup()
-	//if err != nil {
-	//	fmt.Printf("Generating Keys returned the following error. err: %v", err.Error())
-	//}
-	err := testDBConnect()
+	pubKey, err := getPubKey(filenamePub)
 	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
+		log.Fatal(err) // TODO check if file exists, otherwise create new key pair.
 	}
-
-	r := mux.NewRouter()
-	fmt.Printf("%s Setup Finished.\nServer listening on localhost:8000\n", ck)
-	r.HandleFunc("/", index)
-	r.HandleFunc("/api/pubkey", retrieveKey).Methods("POST")
-	//r.HandleFunc("/showcase/encrypt", func(w http.ResponseWriter, r *http.Request) {
-	//	readHashedBytes(w, r, privateKey)
-	//})
-	r.HandleFunc("/testing", decryptMessage).Methods("POST")
-
-	log.Fatal(http.ListenAndServe("localhost:8000", r))
+	user := userCred{"testingCode", pubKey}
+	pKeyServer, err := exchangeKey(user, "http://localhost:8000/api/pubkey")
+	if err != nil {
+		log.Fatal(err)
+	}
+	msg := EncryptWithPublicKey([]byte("Hello, World"), pKeyServer)
+	req, err := http.NewRequest("POST", "http://localhost:8000/testing", bytes.NewBuffer(msg))
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	fmt.Println(body)
 }
 
+// Handles setting up the environment
+// Does the following things:
+// Checks if private key file exists
+// Creates a new key pair if key doesn't exists
+// Writes the keyBytes to key files
 func setup() {
 	fpPub, _ := filepath.Abs(filenamePub)
 	fpPriv, _ := filepath.Abs(filenamePriv)
 	fmt.Printf("Generating keys: \n- Privpath: \t%s\n- Pubpath:\t%s\n", fpPriv, fpPub)
-
 	if _, err := os.Stat(fpPriv); !os.IsNotExist(err) { // Checks if private key already exists
 		fmt.Printf("%v PrivKey Path Exists.\nskipping generating keys.\n", ck)
 		return
@@ -71,3 +85,7 @@ func setup() {
 		log.Fatal(err)
 	}
 }
+
+// TODO
+//Refactor Crypto (using new code base)
+//Implement byte writer to file (pub/priv key)

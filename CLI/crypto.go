@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 )
 
 var (
@@ -20,6 +25,29 @@ func GenerateKeyPair(bits int) (*rsa.PrivateKey, *rsa.PublicKey) {
 		log.Fatal(err)
 	}
 	return privkey, &privkey.PublicKey
+}
+
+func BytesToPublicKey(pub []byte) *rsa.PublicKey {
+	block, _ := pem.Decode(pub)
+	enc := x509.IsEncryptedPEMBlock(block)
+	b := block.Bytes
+	var err error
+	if enc {
+		log.Println("is encrypted pem block")
+		b, err = x509.DecryptPEMBlock(block, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	ifc, err := x509.ParsePKIXPublicKey(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	key, ok := ifc.(*rsa.PublicKey)
+	if !ok {
+		log.Fatal("not ok")
+	}
+	return key
 }
 
 // PrivateKeyToBytes private key to bytes
@@ -69,30 +97,6 @@ func BytesToPrivateKey(priv []byte) *rsa.PrivateKey {
 	return key
 }
 
-// BytesToPublicKey bytes to public key
-func BytesToPublicKey(pub []byte) *rsa.PublicKey {
-	block, _ := pem.Decode(pub)
-	enc := x509.IsEncryptedPEMBlock(block)
-	b := block.Bytes
-	var err error
-	if enc {
-		log.Println("is encrypted pem block")
-		b, err = x509.DecryptPEMBlock(block, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	ifc, err := x509.ParsePKIXPublicKey(b)
-	if err != nil {
-		log.Fatal(err)
-	}
-	key, ok := ifc.(*rsa.PublicKey)
-	if !ok {
-		log.Fatal("not ok")
-	}
-	return key
-}
-
 // EncryptWithPublicKey encrypts data with public key
 func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) []byte {
 	hash := sha512.New()
@@ -111,4 +115,28 @@ func DecryptWithPrivateKey(ciphertext []byte, priv *rsa.PrivateKey) []byte {
 		log.Fatal(err)
 	}
 	return plaintext
+}
+
+// Exchanges public keys with the server
+//  - Returns:
+//        Pointer to rsa.PublicKey (server)
+//        Optional: Error
+func exchangeKey(user userCred, url string) (pKey *rsa.PublicKey, err error) {
+	msg, err := json.Marshal(user)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(msg))
+	if err != nil {
+		fmt.Println("Hello")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	pKey = BytesToPublicKey(body)
+	return pKey, err
 }
