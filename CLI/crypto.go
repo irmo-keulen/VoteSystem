@@ -140,3 +140,11 @@ func exchangeKey(user userCred, url string) (pKey *rsa.PublicKey, err error) {
 	pKey = BytesToPublicKey(body)
 	return pKey, err
 }
+
+func decryptMsg(msg []byte) (string, error) {
+	privKey, err := ioutil.ReadFile(filenamePriv)
+	if err != nil {
+		return "", fmt.Errorf("error loading private key, err: %s", err)
+	}
+	return fmt.Sprint(string(DecryptWithPrivateKey(msg, BytesToPrivateKey(privKey)))), nil
+}
