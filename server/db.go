@@ -10,11 +10,18 @@ import (
 var (
 	ctx = context.Background()
 
-	//Global DB-Connector
+	//Global DB-Connector for Public Keys
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
+	})
+
+	//Global DB-Connector for Voting
+	vrdb = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       1,
 	})
 )
 
@@ -41,4 +48,8 @@ func testDBConnect() error {
 	}
 	fmt.Printf("%s Connection Succes\n", ck)
 	return nil
+}
+
+func writeVote() {
+
 }

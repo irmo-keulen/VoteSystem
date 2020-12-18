@@ -1,12 +1,16 @@
 package main
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 )
 
 var (
@@ -90,6 +94,7 @@ func BytesToPublicKey(pub []byte) *rsa.PublicKey {
 	if !ok {
 		log.Fatal("not ok")
 	}
+
 	return key
 }
 
@@ -103,6 +108,35 @@ func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) []byte {
 	return ciphertext
 }
 
+// sign a message with private key
+func SignMessage(msg []byte, priv *rsa.PrivateKey) ([]byte, error) {
+	hash := sha512.New()
+	_, err := hash.Write(msg)
+	if err != nil {
+		return nil, fmt.Errorf("error writing hash : %s", err.Error())
+	}
+	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA512, hash.Sum(nil), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error Calculating sign : %s", err.Error())
+	}
+	return sign, nil
+}
+
+// Verify sign with public key
+func VerifySign(sign []byte, msg []byte, pub *rsa.PublicKey) bool {
+	hash := sha512.New()
+	_, err := hash.Write(msg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error calculating hash")
+		return false
+	}
+	ok := rsa.VerifyPSS(pub, crypto.SHA512, hash.Sum(nil), sign, nil)
+	if ok != nil {
+		return false
+	}
+	return true
+}
+
 // DecryptWithPrivateKey decrypts data with private key
 func DecryptWithPrivateKey(ciphertext []byte, priv *rsa.PrivateKey) []byte {
 	hash := sha512.New()
@@ -111,4 +145,12 @@ func DecryptWithPrivateKey(ciphertext []byte, priv *rsa.PrivateKey) []byte {
 		log.Fatal(err)
 	}
 	return plaintext
+}
+
+func decryptMsg(msg []byte) (string, error) {
+	privKey, err := ioutil.ReadFile(filenamePriv)
+	if err != nil {
+		return "", fmt.Errorf("error loading private key, err: %s", err)
+	}
+	return fmt.Sprint(string(DecryptWithPrivateKey(msg, BytesToPrivateKey(privKey)))), nil
 }

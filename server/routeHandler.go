@@ -1,15 +1,46 @@
 package main
 
 import (
+	"crypto/rsa"
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 type userCred struct {
 	Usercode  string `json:"usercode"`
-	PublicKey string `json:"publickey"`
+	PublicKey []byte `json:"publickey"`
+}
+type vote struct {
+	Subject string `json:"subject"`
+	Hash    []byte `json:"hash"`
+}
+
+func (v *vote) byte() []byte {
+	s := fmt.Sprintf("%s%s", v.Subject, v.Hash)
+	return []byte(s)
+}
+
+// Used for casting a vote.
+// Sign will be an encrypted hash value
+type castVote struct {
+	UserCode string `json:"user_code"`
+	VoteVal  bool   `json:"vote_val"`
+	Hash     []byte `json:"hash"`
+	Sign     []byte `json:"sign"`
+}
+
+// Creates a byte array of the values userCode and voteVal
+// returns a Byte Array
+func (v *castVote) preSign() []byte {
+	return []byte(fmt.Sprintf("%s%t", v.UserCode, v.VoteVal))
+}
+
+func (v *castVote) checkSign(key *rsa.PublicKey) bool {
+	return VerifySign(v.Sign, v.preSign(), key)
 }
 
 // Returns Hello, World. Exclusively for testing purposes.
@@ -28,7 +59,7 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.Unmarshal(msg, &cred)
 	if err != nil {
-		fmt.Println(fmt.Errorf("Error parsing data, %s", err.Error()))
+		fmt.Println(fmt.Errorf("error parsing data : %s", err.Error()))
 		_, _ = w.Write([]byte(`{"http-code":500}`))
 		return
 	}
@@ -39,18 +70,62 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 	// Returns own public key.
 	key, err := ioutil.ReadFile("./pub_key")
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
 	}
 	_, _ = w.Write(key)
 }
 
-func decryptMessage(w http.ResponseWriter, r *http.Request) {
-	privKey, err := ioutil.ReadFile(filenamePriv)
-	msg, err := ioutil.ReadAll(r.Body)
-	fmt.Println(string(msg))
+func getVote(w http.ResponseWriter, r *http.Request) {
+	encMsg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("Error")
+		fmt.Fprintf(os.Stderr, "Error during getVote : %s", err.Error())
 	}
-	fmt.Println(string(DecryptWithPrivateKey(msg, BytesToPrivateKey(privKey))))
 
+	msg, err := decryptMsg(encMsg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error during decrypting message : %s", err.Error())
+	}
+
+	k, err := rdb.Get(ctx, msg).Result()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "User uknown : %s", err.Error())
+		w.Write([]byte("No Public key is found, please send to /api/pubkey"))
+		r.Body.Close()
+		return
+	}
+	h := sha512.New()
+	h.Write([]byte(voteSubject))
+	v := vote{voteSubject, h.Sum(nil)}
+	voteJSON, _ := json.Marshal(v)
+	encVoteJSOn := EncryptWithPublicKey(voteJSON, BytesToPublicKey([]byte(k))) // right now the key cant be parsed.
+	_, _ = w.Write(encVoteJSOn)
+	r.Body.Close()
+}
+
+func handleVote(w http.ResponseWriter, r *http.Request) {
+	vote := castVote{}
+	voteReq, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading cast vote. Err: %s", err.Error())
+		r.Body.Close()
+		return
+	}
+	err = json.Unmarshal(voteReq, &vote)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error retreiving data from body. Err: %s", err.Error())
+		r.Body.Close()
+	}
+	pubKey, err := rdb.Get(ctx, vote.UserCode).Result()
+	if !vote.checkSign(BytesToPublicKey([]byte(pubKey))) {
+		w.Write([]byte("Sign isn't correct\nNo vote has been cast"))
+	}
+	fmt.Printf("%t\n", vote.VoteVal)
+	err = vrdb.Set(ctx, vote.UserCode, fmt.Sprintf("%t", vote.VoteVal), 0).Err()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing vote to database. Err: %s", err.Error())
+		w.Write([]byte("Error handling vote, please try again"))
+	}
+	w.Write([]byte("You have voted"))
+	r.Body.Close()
+	return
 }
