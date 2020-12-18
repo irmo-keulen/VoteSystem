@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
@@ -147,4 +148,18 @@ func decryptMsg(msg []byte) (string, error) {
 		return "", fmt.Errorf("error loading private key, err: %s", err)
 	}
 	return fmt.Sprint(string(DecryptWithPrivateKey(msg, BytesToPrivateKey(privKey)))), nil
+}
+
+// sign a message with private key
+func SignMessage(msg []byte, priv *rsa.PrivateKey) ([]byte, error) {
+	hash := sha512.New()
+	_, err := hash.Write(msg)
+	if err != nil {
+		return nil, fmt.Errorf("error writing hash : %s", err.Error())
+	}
+	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA512, hash.Sum(nil), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error Calculating sign : %s", err.Error())
+	}
+	return sign, nil
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -10,28 +9,25 @@ type userCred struct {
 	PublicKey []byte `json:"publickey"`
 }
 
-type message struct {
-	Msg []byte `json:"message"`
-}
-
 var (
-	filenamePub  = "./pub_key"
-	filenamePriv = "./priv_key"
-	keyUrl       = "http://localhost:8000/api/pubkey"
+	privKey []byte
+	pubKey  []byte
 )
 
 func main() {
 	setup()
-	pubKey, err := getPubKey(filenamePub)
+	var err error
+	privKey, pubKey, err = getKeys(filenamePriv, filenamePub)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Coulnd't parse key : %s", err.Error())
 	}
-	user := userCred{"testingCode", pubKey}
-	pKeyServer, err := exchangeKey(user, "http://localhost:8000/api/pubkey")
+	voteSubject, err := getVoteSub(pubKey, privKey, userCode)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error getting vote subject : %s", err.Error())
 	}
-	if pKeyServer == nil {
-		fmt.Printf("")
-	}
+	voteProcess(voteSubject)
+
 }
+
+// TODO Refactor error handling
+// TODO Vote process.
