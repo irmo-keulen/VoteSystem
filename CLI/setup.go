@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/rsa"
-	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,29 +12,21 @@ import (
 	"path/filepath"
 )
 
-var (
-	filenamePub  = "./pub_key"
-	filenamePriv = "./priv_key"
-	keyUrl       = "http://localhost:8000/api/pubkey"
-	getVoteUrl   = "http://localhost:8000/api/getvote"
-	userCode     = "1234HelloWorld!"
-)
-
 // Handles setting up the environment
 // Does the following things:
 // Checks if private key file exists
 // Creates a new key pair if key doesn't exists
 // Writes the keyBytes to key files
 func setup() {
-	fpPub, _ := filepath.Abs(filenamePub)
-	fpPriv, _ := filepath.Abs(filenamePriv)
+	fpPub, _ := filepath.Abs(filenamePublic)
+	fpPriv, _ := filepath.Abs(filenamePrivate)
 	fmt.Printf("Generating keys: \n- Privpath: \t%s\n- Pubpath:\t%s\n", fpPriv, fpPub)
 	if _, err := os.Stat(fpPriv); !os.IsNotExist(err) { // Checks if private key already exists
 		fmt.Printf("%v PrivKey Path Exists.\nskipping generating keys.\n", ck)
 		return
 	}
 	privKey, pubKey := GenerateKeyPair(4096)
-	privFile, err := os.OpenFile(filenamePriv, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	privFile, err := os.OpenFile(filenamePrivate, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		fmt.Println("Error generating privKey file")
 		log.Fatal(err)
@@ -47,7 +38,7 @@ func setup() {
 	}
 	defer privFile.Close()
 
-	pubFile, err := os.OpenFile(filenamePub, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	pubFile, err := os.OpenFile(filenamePublic, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		fmt.Println("Error generating pubKey file")
 		log.Fatal(err)
@@ -59,11 +50,8 @@ func setup() {
 	}
 }
 
-func getVote(privkey *rsa.PrivateKey, pubKeyServer *rsa.PublicKey) (string, error) {
-	type vote struct {
-		Subject string `json:"subject"`
-		Hash    []byte `json:"hash"`
-	}
+// TODO
+func getVote(pubKeyServer *rsa.PublicKey) (string, error) {
 	voteSub := vote{}
 	msg := EncryptWithPublicKey([]byte("testingCode"), pubKeyServer)
 	req, err := http.NewRequest("POST", getVoteUrl, bytes.NewBuffer(msg))
@@ -93,24 +81,21 @@ func getVote(privkey *rsa.PrivateKey, pubKeyServer *rsa.PublicKey) (string, erro
 	if err != nil {
 		return str, fmt.Errorf("error unmarshalling JSON : %s", err.Error())
 	}
-	h := sha512.New()
-	fmt.Println(voteSub.Subject)
-	h.Write([]byte(voteSub.Subject))
-	if bytes.Compare(voteSub.Hash, h.Sum(nil)) != 0 {
-		fmt.Fprintf(os.Stderr, "\nExpected: %v\n", h.Sum(nil))
-		fmt.Fprintf(os.Stderr, "\nGot: %v\n", voteSub.Hash)
+
+	if !voteSub.checkHash() {
 		return voteSub.Subject, fmt.Errorf("hash isn't correct")
 	}
 	return voteSub.Subject, nil
 }
 
 // Handles getting the pub/priv key.
-func getKeys(privPath string, pubpath string) (privKey []byte, pubKey []byte, err error) {
-	pubKey, err = getKey(filenamePub)
+// Looks for the filenames declared in cli.go
+func getKeys() (privKey []byte, pubKey []byte, err error) {
+	pubKey, err = getKey(filenamePublic)
 	if err != nil {
 		return privKey, pubKey, fmt.Errorf("error parsing pubKey : %s", err.Error())
 	}
-	privKey, err = getKey(filenamePriv)
+	privKey, err = getKey(filenamePrivate)
 	if err != nil {
 		return privKey, pubKey, fmt.Errorf("error parsing privKey : %s", err.Error())
 	}
@@ -130,20 +115,4 @@ func getKey(filename string) ([]byte, error) {
 		return nil, fmt.Errorf("error reading file Err: %s", err.Error())
 	}
 	return key, nil
-}
-
-func getVoteSub(pubKey []byte, privKey []byte, userCode string) (string, error) {
-	user := userCred{userCode, pubKey}
-	pKeyServer, err := exchangeKey(user, keyUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if pKeyServer == nil {
-		fmt.Printf("No key was parsed")
-	}
-	sub, err := getVote(BytesToPrivateKey(privKey), pKeyServer)
-	if err != nil {
-		return "", fmt.Errorf("error retrieving voting subject : %s", err.Error())
-	}
-	return sub, nil
 }

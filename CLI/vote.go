@@ -12,32 +12,16 @@ import (
 	"os"
 )
 
-type voteVal bool
-
-type votemessage struct {
-	userCode string
-	vote     voteVal
-	hash     []byte
-}
-
 // Used for casting a vote.
 // Sign will be an encrypted hash value
-type castVote struct {
-	UserCode string `json:"user_code"`
-	VoteVal  bool   `json:"vote_val"`
-	Hash     []byte `json:"hash"`
-	Sign     []byte `json:"sign"`
-}
-
-// Creates a byte array of the values userCode and voteVal
-// returns a Byte Array
-func (v *castVote) preSign() []byte {
-	return []byte(fmt.Sprintf("%s%t", v.UserCode, v.VoteVal))
-}
 
 // Prompts user for the vote
 // Right now this only a for or against vote
-func voteProcess(voteSubject string) bool {
+func voteProcess() error {
+	voteSubject, err := getVoteSub(pubKey, userCode)
+	if err != nil {
+		return fmt.Errorf("error retreiving vote subject : %s", err.Error())
+	}
 	fmt.Printf("The vote today is about %s\nAre you for(1) or against(2)?", voteSubject)
 	reader := bufio.NewReader(os.Stdin)
 	vote := false
@@ -60,7 +44,7 @@ mainLoop:
 		}
 	}
 	postVote(vote)
-	return true
+	return nil
 }
 
 // Handles the voting process connection wise
@@ -89,4 +73,23 @@ func postVote(voteVal bool) {
 	rsp, err := ioutil.ReadAll(resp.Body)
 	fmt.Println(string(rsp))
 	return
+}
+
+// Retrieves vote subject from server.
+// This is a wrapper around the getVote func.
+// Handles exchanging keys etc.
+func getVoteSub(pubKey []byte, userCode string) (string, error) {
+	user := userCred{userCode, pubKey}
+	pKeyServer, err := exchangeKey(user, keyUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if pKeyServer == nil {
+		fmt.Printf("No key was parsed")
+	}
+	sub, err := getVote(pKeyServer)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving voting subject : %s", err.Error())
+	}
+	return sub, nil
 }

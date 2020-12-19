@@ -15,17 +15,13 @@ import (
 	"net/http"
 )
 
-var (
-	ck = "\u2713"
-)
-
 // GenerateKeyPair generates a new key pair
 func GenerateKeyPair(bits int) (*rsa.PrivateKey, *rsa.PublicKey) {
-	privkey, err := rsa.GenerateKey(rand.Reader, bits)
+	privatekey, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return privkey, &privkey.PublicKey
+	return privatekey, &privatekey.PublicKey
 }
 
 func BytesToPublicKey(pub []byte) *rsa.PublicKey {
@@ -143,7 +139,7 @@ func exchangeKey(user userCred, url string) (pKey *rsa.PublicKey, err error) {
 }
 
 func decryptMsg(msg []byte) (string, error) {
-	privKey, err := ioutil.ReadFile(filenamePriv)
+	privKey, err := ioutil.ReadFile(filenamePrivate)
 	if err != nil {
 		return "", fmt.Errorf("error loading private key, err: %s", err)
 	}
