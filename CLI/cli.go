@@ -16,3 +16,5 @@ func main() {
 		log.Fatalf("error Completing vote process : %s", err.Error())
 	}
 }
+
+// TODO sign castVote message

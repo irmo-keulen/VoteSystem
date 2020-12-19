@@ -8,11 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-	filenamePub  = "./pub_key"
-	filenamePriv = "./priv_key"
-)
-
 func main() {
 	setup()
 	//if err != nil {
@@ -23,7 +18,6 @@ func main() {
 		fmt.Println(err.Error())
 		panic(err)
 	}
-	writeVote()
 	r := mux.NewRouter()
 	fmt.Printf("%s Setup Finished.\nServer listening on localhost:8000\n", ck)
 	r.HandleFunc("/", index)
@@ -33,5 +27,3 @@ func main() {
 
 	log.Fatal(http.ListenAndServe("localhost:8000", r))
 }
-
-// TODO Vote Process

@@ -8,10 +8,6 @@ import (
 	"path/filepath"
 )
 
-var (
-	voteSubject string
-)
-
 // Handles setting up the environment
 // Does the following things:
 // Checks if private key file exists
@@ -54,11 +50,33 @@ func setup() {
 
 // Prompts user for the vote subject
 // Right now there is only a binary vote system
-// TODO multi answer voting
+// TODO multi answer voting <- Not sure if this is necessary for the assignment, might implement later
 func setupVote() {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("What is the subject of the vote?")
 	voteSubject, _ = reader.ReadString('\n')
 	fmt.Printf("The vote will be about %s\n", voteSubject)
 	return
+}
+
+// A VERY basic test (writes to database and checks error, and retreives the data)
+// TODO Randomize data written
+func testDBConnect() error {
+	fmt.Println("Testing Connection")
+
+	err := rdb.Set(ctx, "Hello", "World", 0).Err()
+	if err != nil {
+		return fmt.Errorf("redis error during write: %s", err.Error())
+	}
+
+	val, err := rdb.Get(ctx, "Hello").Result()
+	if err != nil {
+		return fmt.Errorf("redis error durign GET: %s", err.Error())
+	}
+
+	if val != "World" {
+		return fmt.Errorf("redis error, result not equal")
+	}
+	fmt.Printf("%s Connection Succes\n", ck)
+	return nil
 }
