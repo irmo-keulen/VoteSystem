@@ -9,11 +9,11 @@ import (
 )
 
 func main() {
-	setup()
+	err := setup()
 	//if err != nil {
 	//	fmt.Printf("Generating Keys returned the following error. err: %v", err.Error())
 	//}
-	err := testDBConnect()
+
 	if err != nil {
 		fmt.Println(err.Error())
 		panic(err)

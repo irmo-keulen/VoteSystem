@@ -13,7 +13,7 @@ import (
 // Checks if private key file exists
 // Creates a new key pair if key doesn't exists
 // Writes the keyBytes to key files
-func setup() {
+func setup() error {
 	setupVote()
 	fpPub, _ := filepath.Abs(filenamePub)
 	fpPriv, _ := filepath.Abs(filenamePriv)
@@ -21,7 +21,7 @@ func setup() {
 
 	if _, err := os.Stat(fpPriv); !os.IsNotExist(err) { // Checks if private key already exists
 		fmt.Printf("%v PrivKey Path Exists.\nskipping generating keys.\n", ck)
-		return
+		return nil
 	}
 	privKey, pubKey := GenerateKeyPair(4096)
 	privFile, err := os.OpenFile(filenamePriv, os.O_CREATE|os.O_WRONLY, os.ModePerm)
@@ -46,6 +46,7 @@ func setup() {
 		fmt.Println("Error writing to pubFile")
 		log.Fatal(err)
 	}
+	return testDBConnect()
 }
 
 // Prompts user for the vote subject

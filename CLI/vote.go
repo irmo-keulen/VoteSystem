@@ -18,6 +18,7 @@ import (
 // Prompts user for the vote
 // Right now this only a for or against vote
 func voteProcess() error {
+	// TODO Encrypt vote process
 	voteSubject, err := getVoteSub(pubKey, userCode)
 	if err != nil {
 		return fmt.Errorf("error retreiving vote subject : %s", err.Error())
@@ -49,6 +50,7 @@ mainLoop:
 
 // Handles the voting process connection wise
 func postVote(voteVal bool) {
+	// Encrypt request
 	h := sha512.New()
 	h.Write([]byte(fmt.Sprintf("%s%t", userCode, voteVal)))
 	vote := castVote{
