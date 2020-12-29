@@ -10,10 +10,6 @@ import (
 
 func main() {
 	err := setup()
-	//if err != nil {
-	//	fmt.Printf("Generating Keys returned the following error. err: %v", err.Error())
-	//}
-
 	if err != nil {
 		fmt.Println(err.Error())
 		panic(err)

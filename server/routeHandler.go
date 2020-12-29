@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 )
@@ -36,12 +37,16 @@ func retrieveKey(w http.ResponseWriter, r *http.Request) {
 	// Returns own public key.
 	key, err := ioutil.ReadFile("./pub_key")
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("error reading publicKey : %s", err.Error())
 	}
 	_, _ = w.Write(key)
 }
 
 func getVote(w http.ResponseWriter, r *http.Request) {
+	privKey, err := ioutil.ReadFile(filenamePriv)
+	if err != nil {
+		log.Fatalf("error reading private key : %s", err.Error())
+	}
 	encMsg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error during getVote : %s", err.Error())
@@ -51,7 +56,6 @@ func getVote(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error during decrypting message : %s", err.Error())
 	}
-
 	k, err := rdb.Get(ctx, msg).Result()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "User uknown : %s", err.Error())
@@ -61,10 +65,19 @@ func getVote(w http.ResponseWriter, r *http.Request) {
 	}
 	h := sha512.New()
 	h.Write([]byte(voteSubject))
+	sign, err := SignMessage([]byte(voteSubject), BytesToPrivateKey(privKey))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error generating sign : %s", err.Error())
+	}
 	v := vote{voteSubject, h.Sum(nil)}
 	voteJSON, _ := json.Marshal(v)
-	encVoteJSOn := EncryptWithPublicKey(voteJSON, BytesToPublicKey([]byte(k))) // right now the key cant be parsed.
-	_, _ = w.Write(encVoteJSOn)
+	encVoteJSOn := EncryptWithPublicKey(voteJSON, BytesToPublicKey([]byte(k)))
+	sMsg := signedMessage{encVoteJSOn, sign}
+	val, err := json.Marshal(sMsg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "couldn't parse json")
+	}
+	_, _ = w.Write(val)
 	r.Body.Close()
 }
 

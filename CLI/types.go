@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"crypto/sha512"
 	"fmt"
 )
@@ -39,6 +40,11 @@ type vote struct {
 	Hash    []byte `json:"hash"`
 }
 
+type signedMessage struct {
+	Vote []byte `json:"vote"`
+	Sign []byte `json:"sign"`
+}
+
 // Compares the parsed hash with a calculated hash
 func (v *vote) checkHash() bool {
 	h := sha512.New()
@@ -47,6 +53,12 @@ func (v *vote) checkHash() bool {
 		return false
 	}
 	return true
+}
+
+// Verifies the sign of a vote.
+// Returns true if sign is correct
+func (v *vote) checkSign(sign []byte, pubKey *rsa.PublicKey) bool {
+	return VerifySign(sign, []byte(v.Subject), pubKey)
 }
 
 // Used to identify CLI to the server

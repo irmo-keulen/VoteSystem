@@ -93,5 +93,6 @@ func getVoteSub(pubKey []byte, userCode string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error retrieving voting subject : %s", err.Error())
 	}
+
 	return sub, nil
 }

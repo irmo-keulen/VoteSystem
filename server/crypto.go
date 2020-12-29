@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/pem"
@@ -90,7 +91,6 @@ func BytesToPublicKey(pub []byte) *rsa.PublicKey {
 	if !ok {
 		log.Fatal("not ok")
 	}
-
 	return key
 }
 
@@ -106,12 +106,12 @@ func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) []byte {
 
 // sign a message with private key
 func SignMessage(msg []byte, priv *rsa.PrivateKey) ([]byte, error) {
-	hash := sha512.New()
+	hash := sha256.New()
 	_, err := hash.Write(msg)
 	if err != nil {
 		return nil, fmt.Errorf("error writing hash : %s", err.Error())
 	}
-	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA512, hash.Sum(nil), nil)
+	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, hash.Sum(nil), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error Calculating sign : %s", err.Error())
 	}
@@ -120,13 +120,13 @@ func SignMessage(msg []byte, priv *rsa.PrivateKey) ([]byte, error) {
 
 // Verify sign with public key
 func VerifySign(sign []byte, msg []byte, pub *rsa.PublicKey) bool {
-	hash := sha512.New()
+	hash := sha256.New()
 	_, err := hash.Write(msg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating hash")
 		return false
 	}
-	ok := rsa.VerifyPSS(pub, crypto.SHA512, hash.Sum(nil), sign, nil)
+	ok := rsa.VerifyPSS(pub, crypto.SHA256, hash.Sum(nil), sign, nil)
 	if ok != nil {
 		return false
 	}

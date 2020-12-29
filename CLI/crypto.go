@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 // GenerateKeyPair generates a new key pair
@@ -148,14 +150,28 @@ func decryptMsg(msg []byte) (string, error) {
 
 // sign a message with private key
 func SignMessage(msg []byte, priv *rsa.PrivateKey) ([]byte, error) {
-	hash := sha512.New()
+	hash := sha256.New()
 	_, err := hash.Write(msg)
 	if err != nil {
 		return nil, fmt.Errorf("error writing hash : %s", err.Error())
 	}
-	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA512, hash.Sum(nil), nil)
+	sign, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, hash.Sum(nil), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error Calculating sign : %s", err.Error())
 	}
 	return sign, nil
+}
+
+func VerifySign(sign []byte, msg []byte, pub *rsa.PublicKey) bool {
+	hash := sha256.New()
+	_, err := hash.Write(msg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error calculating hash")
+		return false
+	}
+	ok := rsa.VerifyPSS(pub, crypto.SHA256, hash.Sum(nil), sign, nil)
+	if ok != nil {
+		return false
+	}
+	return true
 }

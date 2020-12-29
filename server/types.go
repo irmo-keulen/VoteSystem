@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 
 	"github.com/go-redis/redis/v8"
@@ -34,6 +35,18 @@ type userCred struct {
 	Usercode  string `json:"usercode"`
 	PublicKey []byte `json:"publickey"`
 }
+
+type signedMessage struct {
+	Vote []byte `json:"vote"`
+	Sign []byte `json:"sign"`
+}
+
+func (m *signedMessage) vote(key *rsa.PrivateKey) (v vote, err error) {
+	val := DecryptWithPrivateKey(m.Vote, key)
+	err = json.Unmarshal(val, v)
+	return v, err
+}
+
 type vote struct {
 	Subject string `json:"subject"`
 	Hash    []byte `json:"hash"`
@@ -61,4 +74,10 @@ func (v *castVote) preSign() []byte {
 
 func (v *castVote) checkSign(key *rsa.PublicKey) bool {
 	return VerifySign(v.Sign, v.preSign(), key)
+}
+
+type msg struct {
+	Message string `json:"message"`
+	Hash    []byte `json:"hash"`
+	Sign    []byte `json:"sign"`
 }

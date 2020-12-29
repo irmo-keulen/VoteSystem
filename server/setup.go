@@ -60,7 +60,7 @@ func setupVote() {
 	return
 }
 
-// A VERY basic test (writes to database and checks error, and retreives the data)
+// A VERY basic test (writes to database and checks error, and retrieves the data)
 // TODO Randomize data written
 func testDBConnect() error {
 	fmt.Println("Testing Connection")

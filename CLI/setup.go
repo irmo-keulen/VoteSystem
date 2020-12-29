@@ -50,30 +50,34 @@ func setup() {
 	}
 }
 
-// TODO
 func getVote(pubKeyServer *rsa.PublicKey) (string, error) {
 	voteSub := vote{}
-	msg := EncryptWithPublicKey([]byte("testingCode"), pubKeyServer)
+	msg := EncryptWithPublicKey([]byte(userCode), pubKeyServer)
 	req, err := http.NewRequest("POST", getVoteUrl, bytes.NewBuffer(msg))
 	if err != nil {
-		return "", fmt.Errorf("error creating request : %s", err.Error())
+		return "", fmt.Errorf("error creating request 1 : %s", err.Error())
 	}
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error creating request : %s", err.Error())
+		return "", fmt.Errorf("error sending request : %s", err.Error())
 	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), fmt.Errorf("error finishing POST request : %s", err.Error())
 	}
+
 	defer func() {
 		err = resp.Body.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error closing response body : %s", err.Error())
 		}
 	}()
-	str, err := decryptMsg(body)
+	sMsg := signedMessage{}
+	json.Unmarshal(body, &sMsg)
+	str, err := decryptMsg(sMsg.Vote)
 	if err != nil {
 		return "", fmt.Errorf("error decrypting get vote : %s", err.Error())
 	}
@@ -84,6 +88,9 @@ func getVote(pubKeyServer *rsa.PublicKey) (string, error) {
 
 	if !voteSub.checkHash() {
 		return voteSub.Subject, fmt.Errorf("hash isn't correct")
+	}
+	if !voteSub.checkSign(sMsg.Sign, pubKeyServer) {
+		return voteSub.Subject, fmt.Errorf("sign isn't correct")
 	}
 	return voteSub.Subject, nil
 }
