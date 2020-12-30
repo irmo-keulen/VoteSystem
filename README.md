@@ -75,9 +75,13 @@ Any recast of vote will update the vote
 The votes are written to the database using the usercode as key.
 After the vote this database should be made public, so one can validate his/her own vote.
 
+
+
 ## Voting Process explained (client-side (CLI))
 ### Setup
+
 1. The server checks for a private key file, if one doesn't exist, a new RSA-Key pair will be created and written to file.
+   **Good to know, no SSH-key's will be overwritten**
 ### Vote Process
 1. The vote process is retrieved from the server (```$URL/api/getvote```).
 2. The user is prompted to vote for or against the subject
@@ -85,3 +89,25 @@ After the vote this database should be made public, so one can validate his/her 
 4. Encrypt using server-public-key
 5. Print response to the CLI and exit.
 
+## Voting Process explained (server-side)
+### Setup
+1. First prompts the user what the subject of the vote is
+2. A Key-pair is generated (if a keypair doesn't exist) **Good to know, no SSH-key's will be overwritten**
+3. The database is checked by writing to and reading from the Redis database. If no connection could be made, the program exits.
+4. A router object is created.
+### Vote process.
+1. A CLI-user will automaticly upon starting send their public key to the server using the URI ```<URL>/api/pubkey```
+2. The server respondes with sending his own public key.
+3. The key send by the user is written to the database (key is the usercode).
+4. the user will then request the vote subject, this is requested by calling the URI ```<URL>/api/getvote```
+The response will be encrypted and signed by the server.
+5. The user will response if he/she is for or against the votesubject.
+6. The data will be stored with the key being the usercode.
+7. The server will response with a message that the user has voted.
+
+## Possible weaknesses.
+1. The usercode needs to be unique enough otherwise it would be possible to bruteforce. 
+2. Right now, no usercheck is carried out. This should be done in a real life environment.
+3. There is no 2FA.
+4. The server can't be verified.
+5. There is no way to check if a user has voted in the past.
